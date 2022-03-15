@@ -1,0 +1,13 @@
+{
+  "name": "node_code",
+  "version": "1.0.0",
+  "description": "miaosha node.js code",
+  "main": "service.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node service.js",
+    "server": "nodemon service.js --ignore client"
+  },
+  "author": "Milky",
+  "license": "ISC"
+}
