@@ -5,6 +5,7 @@ const path = require('path')
 const userRouter = require('./routes/user');
 const adminRouter = require('./routes/admin');
 const itemRouter = require('./routes/item');
+const cartRouter = require('./routes/cart');
 
 var server = express();
 
@@ -28,6 +29,7 @@ server.use('/upload/',express.static(path.join(__dirname,'upload')));
 server.use('/admin',adminRouter());
 server.use('/user',userRouter());
 server.use('/item',itemRouter());
+server.use('/cart',cartRouter());
 
 server.listen(5129,"127.0.0.1",function (){
     console.log('running at http://127.0.0.1:5129');

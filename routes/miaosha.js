@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.get('/getSeckill',async (req,res)=>{
     let sql = miaosha.select_sql
-    miaoshaQuery(sql,(err,result)=>{
+    miaoshaQuery(sql,{},(err,result)=>{
         if(err) console.error(err)
         else{
             if(result.length>0) {

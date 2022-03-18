@@ -1,5 +1,5 @@
 const express = require('express');
-const db = require("./databases");
+const {sqlQuery} = require("./databases");
 const fs = require('fs')
 const path = require('path')
 const multer = require('multer');
@@ -11,14 +11,14 @@ router.use(multer({dest:'./upload/'}).any());
 
 router.get('/getCarousel',(req,res)=>{
     let sql = item.getCarousel
-    db.sqlQuery(sql,{},(err,result)=>{
+    sqlQuery(sql,{},(err,result)=>{
         if(err) console.error(err)
         else{
             if(result.length<=0){
-                // console.log("获取carousel列表失败");
+                console.log("获取carousel列表失败");
                 res.send({status:400,errorCode:'getCarousel.non-success',msg:'获取carousel列表失败'}).end();
             }else{
-                // console.log("获取carousel列表成功");
+                console.log("获取carousel列表成功");
                 res.send({status:200,errorCode:'getCarousel.success',msg:'获取carousel列表成功',data:result}).end();
             }
         }
@@ -27,7 +27,7 @@ router.get('/getCarousel',(req,res)=>{
 
 router.get('/getBrand',(req,res)=>{
     let sql = item.getBrand
-    db.sqlQuery(sql, {},(err,result)=>{
+    sqlQuery(sql, {},(err,result)=>{
         if(err) console.error(err)
         else{
             if(result.length<=0){
@@ -43,7 +43,7 @@ router.get('/getBrand',(req,res)=>{
 
 router.get('/getNice',(req,res)=>{
     let sql = item.getNice
-    db.sqlQuery(sql, {},(err,result)=>{
+    sqlQuery(sql, {},(err,result)=>{
         if(err) console.error(err)
         else{
             if(result.length<=0){
@@ -57,7 +57,7 @@ router.get('/getNice',(req,res)=>{
 
 router.get('/getRecommond',(req,res)=>{
     let sql = item.getRecommond
-    db.sqlQuery(sql, {},(err,result)=>{
+    sqlQuery(sql, {},(err,result)=>{
         if(err) console.error(err)
         else{
             if(result.length<=0){
@@ -74,7 +74,7 @@ router.get('/getRecommond',(req,res)=>{
 router.post('/getItem',(req,res)=>{
     let sql = item.getItem
     let ID = req.body.ID
-    db.sqlQuery(sql, [ID],async function (err,result){
+    sqlQuery(sql, [ID],async function (err,result){
         if(err) console.error(err)
         else{
             if(result.length<=0){
@@ -111,7 +111,7 @@ router.use('/upload',(req,res)=>{
 //             if(err){
 //                 console.error(err)
 //             }else{
-//                 db.query('DELETE FROM ',(err))
+//                 query('DELETE FROM ',(err))
 //             }
 //         })
 //     }
@@ -153,7 +153,7 @@ router.post('/getItemInfo',async (req,res)=>{
 function getItemInfo(ID){
     let sql = item.getItemInfo
     return new Promise((resolve,reject) => {
-        db.sqlQuery(sql,[ID],(err,result)=>{
+        sqlQuery(sql,[ID],(err,result)=>{
             if(result.length>0){
                 let brief_img = result[0].brief.split(';')
                 result[0]['brief_img'] = brief_img

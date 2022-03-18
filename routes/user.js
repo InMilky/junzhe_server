@@ -4,7 +4,7 @@ const {sqlQuery} = require("./databases");
 const jwtUtil = require("./jwtUtils");
 const chinaTime = require('china-time');
 const {user} =  require('./sql');
-
+// const {getUserInfo,getUsername} = require('./fn')
 const router = express.Router();
 
 // POST=>req.body.XXX, GET=>req.query.XXX
@@ -75,6 +75,7 @@ router.get('/getuser',async (req,res)=>{
     if(username){
         res.send({status: 200, errorCode: 'ok', msg: '获取用户信息成功',username:username}).end();
     }else{
+	    // res.sendStatus(401);
         res.send({status: 400, errorCode: 'non-get.userInfo', msg: '登录已失效，请重新登录',data:decode}).end();
     }
 })
@@ -89,10 +90,6 @@ router.get('/test',async (req,res)=>{
     }
 })
 
-function getUserInfo(token){
-    let decode = jwtUtil.verify(token,jwtUtil.SECRET_KEY)
-    return new Promise((resolve => resolve({user_id:decode.client_id,username:decode.username})))
-}
 function InsertUser(username, telphone, email, nowtime){
     const sql = user.table.insert
     return new Promise((resolve,reject) => {
@@ -120,6 +117,10 @@ function InsertPassword(telphone,encrypt_password,user_id){
             }
         })
     })
+}
+function getUserInfo(token){
+    let decode = jwtUtil.verify(token,jwtUtil.SECRET_KEY)
+    return new Promise((resolve => resolve({user_id:decode.client_id,username:decode.username})))
 }
 function getUsername(ID){
     const sql = user.table.queryByUserID

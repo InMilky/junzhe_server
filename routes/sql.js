@@ -1,6 +1,6 @@
 const user = {
   table: {
-    insert: 'insert into user_table(username,telphone,email,register_date) values(?,?,?,?,?)',
+    insert: 'insert into user_table(username,telphone,email,register_date) values(?,?,?,?)',
     queryByTelphone: 'select * from user_table where telphone = ?',
     queryByUsername: 'select * from user_table where username = ?',
     queryByUserID: 'select * from user_table where ID = ?'
@@ -27,7 +27,7 @@ const item = {
   getRecommond:'select * from item where img_url!=\'upload/\' order by sold_num DESC limit 12'
 }
 const cart = {
-  select_sql: 'select * from cart where user_id = ?'
+  select: 'select * from cart where user_id = ?'
 }
 const order = {
   select_sql: 'select * from orders where user_id = ?'
