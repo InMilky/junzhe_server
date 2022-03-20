@@ -3,9 +3,10 @@ const bP = require('body-parser');
 const debug = require('debug')('my-application'); // debug模块
 const path = require('path')
 const userRouter = require('./routes/user');
-const adminRouter = require('./routes/admin');
 const itemRouter = require('./routes/item');
 const cartRouter = require('./routes/cart');
+const orderRouter = require('./routes/order');
+const miaoshaRouter = require('./routes/miaosha');
 
 var server = express();
 
@@ -26,10 +27,11 @@ server.use(bP.urlencoded({extended:false}));
 
 server.use('/upload/',express.static(path.join(__dirname,'upload')));
 
-server.use('/admin',adminRouter());
 server.use('/user',userRouter());
 server.use('/item',itemRouter());
 server.use('/cart',cartRouter());
+server.use('/order',orderRouter());
+server.use('/miaosha',miaoshaRouter());
 
 server.listen(5129,"127.0.0.1",function (){
     console.log('running at http://127.0.0.1:5129');

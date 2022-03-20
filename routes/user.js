@@ -4,7 +4,7 @@ const {sqlQuery} = require("./databases");
 const jwtUtil = require("./jwtUtils");
 const chinaTime = require('china-time');
 const {user} =  require('./sql');
-// const {getUserInfo,getUsername} = require('./fn')
+const {getUserInfo,getUsername} = require('./fn')
 const router = express.Router();
 
 // POST=>req.body.XXX, GET=>req.query.XXX
@@ -23,7 +23,7 @@ router.post('/signin',(req,res)=>{
             }else if(result[0].telphone===telphone && result[0].encrypt_password === password){
                 console.log(telphone+"：登录成功");
                 let user = await getUsername(result[0].user_id)
-                let expiresIn = 3600
+                let expiresIn = 3600*2
                 let jwt_token = jwtUtil.sign({'client_id':result[0].ID,'username':user.username},jwtUtil.SECRET_KEY,expiresIn);
                 res.send({status:200,errorCode:'ok',msg:'登录成功',username:user.username,token:jwt_token}).end();
             }else {
@@ -76,7 +76,7 @@ router.get('/getuser',async (req,res)=>{
         res.send({status: 200, errorCode: 'ok', msg: '获取用户信息成功',username:username}).end();
     }else{
 	    // res.sendStatus(401);
-        res.send({status: 400, errorCode: 'non-get.userInfo', msg: '登录已失效，请重新登录',data:decode}).end();
+        res.send({status: 401, errorCode: 'non-get.userInfo', msg: '登录已失效，请重新登录',data:decode}).end();
     }
 })
 
@@ -112,23 +112,6 @@ function InsertPassword(telphone,encrypt_password,user_id){
                 // return new Promise(resolve=>{resolve({status:200})});
                 return  resolve({status:200})
             } else {
-                console.error(err);
-                return reject(err)
-            }
-        })
-    })
-}
-function getUserInfo(token){
-    let decode = jwtUtil.verify(token,jwtUtil.SECRET_KEY)
-    return new Promise((resolve => resolve({user_id:decode.client_id,username:decode.username})))
-}
-function getUsername(ID){
-    const sql = user.table.queryByUserID
-    return new Promise((resolve,reject) => {
-        sqlQuery(sql,[ID],(err,result)=>{
-            if(result.length>0){
-                return  resolve({username:result[0].username})
-            }else{
                 console.error(err);
                 return reject(err)
             }

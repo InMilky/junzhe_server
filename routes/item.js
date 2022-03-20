@@ -4,6 +4,10 @@ const fs = require('fs')
 const path = require('path')
 const multer = require('multer');
 const {item} =  require('./sql');
+const {
+    getItem,
+    getItemInfo
+} = require('./fn')
 
 const router = express.Router();
 
@@ -15,10 +19,8 @@ router.get('/getCarousel',(req,res)=>{
         if(err) console.error(err)
         else{
             if(result.length<=0){
-                console.log("获取carousel列表失败");
                 res.send({status:400,errorCode:'getCarousel.non-success',msg:'获取carousel列表失败'}).end();
             }else{
-                console.log("获取carousel列表成功");
                 res.send({status:200,errorCode:'getCarousel.success',msg:'获取carousel列表成功',data:result}).end();
             }
         }
@@ -31,10 +33,8 @@ router.get('/getBrand',(req,res)=>{
         if(err) console.error(err)
         else{
             if(result.length<=0){
-                // console.log("获取品牌brand列表失败");
                 res.send({status:400,errorCode:'getBrand.non-success',msg:'获取品牌brand列表失败'}).end();
             }else{
-                // console.log("获取品牌brand列表成功");
                 res.send({status:200,errorCode:'getBrand.success',msg:'获取品牌brand列表成功',data:result}).end();
             }
         }
@@ -49,6 +49,14 @@ router.get('/getNice',(req,res)=>{
             if(result.length<=0){
                 res.send({status:400,errorCode:'getNice.non-success'}).end();
             }else{
+                let arr = [],arr2=[]
+                for(let i=0;i<4;i++){
+                    arr.push(result[i])
+                }
+                for(let i=4;i<8;i++){
+                    arr2.push(result[i])
+                }
+                result = [arr,arr2]
                 res.send({status:200,errorCode:'getNice.success',data:result}).end();
             }
         }
@@ -61,35 +69,36 @@ router.get('/getRecommond',(req,res)=>{
         if(err) console.error(err)
         else{
             if(result.length<=0){
-                // console.log("获取推荐列表失败");
                 res.send({status:400,errorCode:'getRecommond.non-success',msg:'获取推荐列表失败'}).end();
             }else{
-                // console.log("获取推荐列表成功");
                 res.send({status:200,errorCode:'getRecommond.success',msg:'获取推荐列表成功',data:result}).end();
             }
         }
     })
 })
 
-router.post('/getItem',(req,res)=>{
-    let sql = item.getItem
-    let ID = req.body.ID
-    sqlQuery(sql, [ID],async function (err,result){
+router.get('/getMiaosha',(req,res)=>{
+    let sql = item.getMiaosha
+    sqlQuery(sql, {},(err,result)=>{
         if(err) console.error(err)
         else{
             if(result.length<=0){
-                console.log(ID+"：该商品不存在，请选择其他商品");
-                res.send({status:400,errorCode:'getRecommond.non-success',msg:'该商品不存在，请选择其他商品'}).end();
+                res.send({status:400,errorCode:'getMiaosha.non-success',msg:'获取秒杀列表失败'}).end();
             }else{
-                console.log(ID+"：获取商品信息成功");
-                let detail = await getItemInfo(ID)
-                if(detail){
-                    result[0]['detail']=detail
-                }
-                res.send({status:200,errorCode:'getRecommond.success',msg:'获取商品信息成功',data:result}).end();
+                res.send({status:200,errorCode:'getMiaosha.success',msg:'获取秒杀列表成功',data:result}).end();
             }
         }
     })
+})
+
+router.post('/getItem',async (req,res)=>{
+    let ID = req.body.ID
+    let result = await getItem(ID,item.getItem)
+    if(result){
+        res.send({status:200,errorCode:'getItem.success',msg:'获取商品信息成功',data:result}).end();
+    }else{
+        res.send({status:400,errorCode:'getItem.non-success',msg:'该商品不存在，请选择其他商品'}).end();
+    }
 })
 
 // enctype='multipart/form-data'
@@ -117,32 +126,21 @@ router.use('/upload',(req,res)=>{
 //     }
 })
 
-// router.get('/getuser',async (req,res)=>{
-//     let token = req.headers.authorization;
-//     let decode = await getUserInfo(token)
-//     let username = decode.username
-//     if(username){
-//         res.send({status: 200, errorCode: 'ok', msg: '获取用户信息成功',username:username}).end();
-//     }else{
-//         res.send({status: 400, errorCode: 'non-get.userInfo', msg: '登录已失效，请重新登录'}).end();
-//     }
-// })
-
-// router.get('/getuserid',async (req,res)=>{
-//     let token = req.headers.authorization;
-//     let decode = await getUserInfo(token)
-//     let user_id = decode.user_id
-//     if(username){
-//         res.send({status: 200, errorCode: 'ok', msg: '获取用户信息成功',username:username}).end();
-//     }else{
-//         res.send({status: 400, errorCode: 'non-get.userInfo', msg: '获取用户信息失败'}).end();
-//     }
-// })
-
-// function getUserInfo(token){
-//     let decode = jwtUtil.verify(token,jwtUtil.SECRET_KEY)
-//     return new Promise((resolve => resolve({user_id:decode.client_id,email:decode.email})))
-// }
+router.get('/search',(req,res)=>{
+    let key = req.query.key
+    let sql = item.search
+    sqlQuery(sql,[key],(err,result)=>{
+        if(err){
+            console.error(err)
+        }else{
+            if(result.length>0){
+                res.send({status: 200, errorCode: 'ok', msg: '关键字搜索商品成功',data:result}).end();
+            }else{
+                res.send({status: 400, errorCode: 'non-get.userInfo', msg: '抱歉，没有找到与"'+key+'"相关的商品'}).end();
+            }
+        }
+    })
+})
 
 
 router.post('/getItemInfo',async (req,res)=>{
@@ -150,22 +148,6 @@ router.post('/getItemInfo',async (req,res)=>{
     res.send({result:result})
 })
 
-function getItemInfo(ID){
-    let sql = item.getItemInfo
-    return new Promise((resolve,reject) => {
-        sqlQuery(sql,[ID],(err,result)=>{
-            if(result.length>0){
-                let brief_img = result[0].brief.split(';')
-                result[0]['brief_img'] = brief_img
-                delete result[0]['brief']
-                delete result[0]['ID']
-                resolve(result)
-            }else{
-                resolve('')
-            }
-        })
-    })
-}
 
 module.exports = function (){
     return router;
