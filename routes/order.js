@@ -1,25 +1,30 @@
 const express = require('express');
-const {sqlQuery} = require("./databases");
-const {cart} =  require('./sql');
-const {getUserInfo} = require('./fn')
+const redis = require('./redis');
 const router = express.Router();
 
 
-router.get('/getCart',async (req,res)=>{
-    let sql = cart.select
-    let token = req.headers.authorization;
-    let decode = await getUserInfo(token)
-    sqlQuery(sql,[decode.user_id],(err,result)=>{
-        if(err) console.error(err)
-        else{
-            if(result.length<=0){
-                res.send({status:400,errorCode:'getCart.non-success',msg:'获取购物车信息失败'}).end();
-            }else{
-                res.send({status:200,errorCode:'getCart.success',msg:'获取购物车信息成功',data:result}).end();
-            }
-        }
+router.get('/set', function(req, res, next) {
+    //设置key：value
+    let {key,value} = req.query
+    redis.set(key, value).then(result => {
+        console.log(result)
+        res.send({status: 200, data: result}).end()
     })
-})
+});
+router.get('/get/:key', function(req, res, next) {
+    //设置key：value
+    let key = req.params.key
+    redis.get(key).then(result=>{
+        res.send({status:200,data:result}).end()
+    })
+});
+router.get('/lpush', function(req, res, next) {
+    //设置key：value
+    let {key,value,time} = req.query
+    redis.expire(key,time).then(result=>{
+        res.send({status:200,data:result}).end()
+    })
+});
 
 module.exports = function (){
     return router;

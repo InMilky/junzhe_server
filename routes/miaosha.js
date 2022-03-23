@@ -4,6 +4,9 @@ const jwtUtil = require("./jwtUtils");
 const {item,miaosha} =  require('./sql');
 const {getItem,getServerTime,getPromo} = require("./fn");
 
+const redis = require("./redis");
+const miaosha_lua = require('../utils/miaosha_lua')(redis)
+
 const router = express.Router();
 
 router.get('/getSeckill',(req,res)=>{
@@ -29,6 +32,21 @@ router.post('/getItem',async (req,res)=>{
     }else{
         res.send({status:400,errorCode:'getSeckillItem.non-success',msg:'该秒杀商品已售罄，请选择其他商品'}).end();
     }
+})
+
+router.post('/order',(req,res)=>{
+    let {user_id,item_id} = req.body
+    miaosha_lua.run('miaosha',user_id,item_id)
+        .then(res=>{
+            if(res){
+                res.send({status:200,errorCode:'miaosha.success',msg:user_id+'---秒杀商品成功'}).end();
+            }else{
+                res.send({status:400,errorCode:'miaosha.non-success',msg:user_id+'---秒杀商品失败'}).end();
+            }
+        }).catch(err=>{
+            console.error(err)
+            Promise.reject(err)
+        })
 })
 
 

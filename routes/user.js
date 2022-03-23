@@ -14,7 +14,6 @@ router.post('/signin',(req,res)=>{
 
     let sql = user.password.queryByTelphone
     sqlQuery(sql,[telphone],async function (err,result){
-        result[0].encrypt_password = undefined;
         if (err){
             console.error(err);
         }else{
