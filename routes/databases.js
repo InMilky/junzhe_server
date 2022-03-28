@@ -41,6 +41,16 @@ module.exports = {
             })
         })
     },
+    delCartItemQuery:function (sql,callback) {
+        db.getConnection((err, connection) => {
+            if (err) throw err;
+            connection.query(sql,(err, result) => {
+                if (err) throw err;
+                callback(err, result);
+                connection.release();
+            })
+        })
+    },
     miaoshaQuery:function (sql,params,callback) {
         miaoshadb.getConnection((err, connection) => {
             if (err) throw err;

@@ -1,10 +1,10 @@
-const jwtUtil = require("./jwtUtils");
-const {user, item} = require("./sql");
-const {sqlQuery,miaoshaQuery} = require("./databases");
+const jwtUtil = require("../routes/jwtUtils");
+const {user, item, cart} = require("./sql");
+const {sqlQuery,miaoshaQuery} = require("../routes/databases");
 
 
 const getUserInfo = function(token){
-    let decode = jwtUtil.verify(token,jwtUtil.SECRET_KEY)
+    let decode = jwtUtil.verify(token)
     return new Promise((resolve => resolve({user_id:decode.client_id,username:decode.username})))
 }
 const getUsername = (ID)=>{
@@ -88,6 +88,39 @@ const getCartItem = (ID,sql) => {
     })
 }
 
+const selectQuantity = (item_id,user_id) => {
+    const sql = cart.selectQuantity
+    return new Promise((resolve,reject) => {
+        sqlQuery(sql, [item_id,user_id],async function (err,result){
+            if(err) console.error(err)
+            else {
+                if (result.length <= 0) {
+                    return resolve(0)
+                } else {
+                    return resolve(result[0].quantity)
+                }
+            }
+        })
+    })
+}
+
+const insertOrderItemInfo = (order_id,item_id,item_price,quantity)=>{
+    const sql = cart.insertOrderItemInfo
+    return new Promise((resolve,reject) => {
+        sqlQuery(sql, [order_id,item_id,item_price,quantity],async function (err,result){
+            if(err) console.error(err)
+            else{
+                if(result.affectedRows<=0){
+                    console.error(err);
+                    return reject(err)
+                }else{
+                    return resolve(result[0])
+                }
+            }
+        })
+    })
+}
+
 module.exports = {
     getUserInfo,
     getUsername,
@@ -95,5 +128,7 @@ module.exports = {
     getItemInfo,
     getPromo,
     getServerTime,
-    getCartItem
+    getCartItem,
+    selectQuantity,
+    insertOrderItemInfo
 }

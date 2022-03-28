@@ -3,8 +3,8 @@ const encrypt = require('./encryption');
 const {sqlQuery} = require("./databases");
 const jwtUtil = require("./jwtUtils");
 const chinaTime = require('china-time');
-const {user} =  require('./sql');
-const {getUserInfo,getUsername} = require('./fn')
+const {user} =  require('../utils/sql');
+const {getUserInfo,getUsername} = require('../utils/fn')
 const router = express.Router();
 
 // POST=>req.body.XXX, GET=>req.query.XXX
@@ -23,8 +23,7 @@ router.post('/signin',(req,res)=>{
             }else if(result[0].telphone===telphone && result[0].encrypt_password === password){
                 console.log(telphone+"：登录成功");
                 let user = await getUsername(result[0].user_id)
-                let expiresIn = 3600*2
-                let jwt_token = jwtUtil.sign({'client_id':result[0].ID,'username':user.username},jwtUtil.SECRET_KEY,expiresIn);
+                let jwt_token = jwtUtil.sign({'client_id':result[0].user_id,'username':user.username});
                 res.send({status:200,errorCode:'ok',msg:'登录成功',username:user.username,token:jwt_token}).end();
             }else {
                 console.log(telphone+"：登录失败，账号或者密码错误");

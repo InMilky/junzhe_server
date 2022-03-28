@@ -3,11 +3,11 @@ const {sqlQuery} = require("./databases");
 const fs = require('fs')
 const path = require('path')
 const multer = require('multer');
-const {item} =  require('./sql');
+const {item} =  require('../utils/sql');
 const {
     getItem,
     getItemInfo
-} = require('./fn')
+} = require('../utils/fn')
 
 const router = express.Router();
 

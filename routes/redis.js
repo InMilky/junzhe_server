@@ -164,15 +164,15 @@ function hgetall(table,value){
  * @param value
  * @returns {Promise<unknown>}
  */
-function sadd(key,value) {
+function sadd(set,key) {
     return new Promise((resolve,reject)=> {
-        if (typeof value === "object") {
-            value = JSON.stringify(value);
-        } else if (value === undefined) {
+        if (typeof key === "object") {
+            key = JSON.stringify(key);
+        } else if (key === undefined) {
             reject("value 不能为 undefined");
             return;
         };
-        redisdb.sadd(key, value, (err, result) => {
+        redisdb.sadd(set,key, (err, result) => {
             err && reject(err);
             resolve(result);
         });
@@ -189,6 +189,14 @@ function smembers(key){
         });
     })
 }
+function sismember(set,key){
+    return new Promise((resolve,reject)=> {
+        redisdb.sismember(set,key, (err, result) => {
+            err && reject(err);
+            resolve(result);
+        });
+    })
+}
 function srem(key,value){
     return new Promise((resolve,reject)=> {
         redisdb.srem(key, value, (err, result) => {
@@ -201,12 +209,37 @@ function srem(key,value){
     })
 }
 
-
+// 秒杀函数需要的redis命令
+function setnx(key,num){
+    return new Promise((resolve,reject)=> {
+        redisdb.setnx(key, num,(err, result) => {
+            err && reject(err);
+            resolve(result);
+        });
+    })
+}
+function incr(key){
+    return new Promise((resolve,reject)=> {
+        redisdb.incr(key, (err, result) => {
+            err && reject(err);
+            resolve(result);
+        });
+    })
+}
+function decr(key){
+    return new Promise((resolve,reject)=> {
+        redisdb.decr(key, (err, result) => {
+            err && reject(err);
+            resolve(result);
+        });
+    })
+}
 
 
 module.exports = {
     set,get,expire,ttl,
     lpush,lrange, lpop,
-    sadd,smembers,srem,
-    hset,hmset,hgetall,hkeys
+    sadd,smembers,srem,sismember,
+    hset,hmset,hgetall,hkeys,
+    setnx,incr,decr
 }

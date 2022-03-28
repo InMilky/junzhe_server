@@ -11,11 +11,6 @@ const user = {
     queryByTelphone: 'select * from user_password where telphone = ?'
   }
 }
-const admin = {
-    queryByTelphone: 'select * from admin_table where telphone = ?',
-    queryByUsername: 'select * from admin_table where username = ?',
-    queryEmail: 'select email from admin_table where ID = ?'
-}
 const item = {
   search:'select * from item where title like "%"?"%" order by price DESC', //根据名字升序降序
   getItem:'select * from item where ID = ?',
@@ -29,10 +24,18 @@ const item = {
   getMiaosha:'select * from item where isMiaosha = 1 and m_price order by m_price DESC'
 }
 const cart = {
-  select: 'select * from cart where user_id = ?'
+  select: 'select item_id,title,price,m_price,quantity,color,img_url from cart inner join item where item.ID = cart.item_id and user_id = ?',
+  selectQuantity: 'select quantity from cart where item_id=? and user_id = ?',
+  insertIntoCart:'INSERT INTO cart(quantity,item_id,user_id) VALUES(?,?,?)',
+  updateQuantity:'update cart set quantity=? where item_id=? and user_id=?',
+  deleteCartItem: 'DELETE FROM cart where user_id=? and item_id in (?)'
 }
 const order = {
-  select_sql: 'select * from orders where user_id = ?'
+  // select: 'select title,price,m_price,quantity,color,img_url,from order left join item where item.ID = cart.item_id and user_id = ?',
+  select: 'select * from order where user_id = ?',
+  insertOrderItemInfo:'INSERT INTO order(order_id,item_id,item_price,quantity) VALUES(?,?,?,?)',
+  insertOrderItem:'INSERT INTO order_detail(ID,account,user_id,ordertime) VALUES(?,?,?,?)',
+  updateOrderStatus:'update order set status=? where ID=?'
 }
 const miaosha={
   seckill_all:'select item_id,title,price,seckill_item.m_price,amount,seckill_item.sold_num,img_url ' +
@@ -40,7 +43,6 @@ const miaosha={
   getPromo:'select start_date,end_date from seckill_promo where ID= (select promo_id from seckill_item where item_id =?)'
 }
 module.exports = {
-  admin,
   user,
   item,
   cart,

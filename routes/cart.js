@@ -1,33 +1,90 @@
 const express = require('express');
-const {sqlQuery} = require("./databases");
-const {cart,item} =  require('./sql');
-const {getUserInfo,getCartItem} = require('./fn')
+const {sqlQuery,delCartItemQuery} = require("./databases");
+const {cart} =  require('../utils/sql');
+const {selectQuantity, getUserInfo} = require('../utils/fn')
+const db = require("mysql/lib/Pool");
 
 const router = express.Router();
 
 router.get('/getCart',async (req,res)=>{
     let sql = cart.select
-    // let token = req.headers.authorization;
-    // let decode = await getUserInfo(token)
-    let decode = {user_id:17}
-    sqlQuery(sql,[decode.user_id], async (err,result)=>{
+    let decode = await getUserInfo(req.headers.authorization)
+    sqlQuery(sql,[decode.user_id], (err,result)=>{
         if(err) console.error(err)
         else{
             if(result.length<=0){
+                console.log('获取购物车信息失败')
                 res.send({status:400,errorCode:'getCart.non-success',msg:'获取购物车信息失败'}).end();
             }else{
-                let sql = item.getCartItem
-                for(let i=0; i<result.length; i++){
-                    let item_info = await getCartItem(result[i].item_id,sql)
-                    result[i] = {...result[i],...item_info}
-                }
+                console.log('获取购物车信息成功')
                 res.send({status:200,errorCode:'getCart.success',msg:'获取购物车信息成功',data:result}).end();
             }
         }
     })
 })
-
-
+router.post('/updateCart',async (req,res)=>{
+    let decode = await getUserInfo(req.headers.authorization)
+    let {item_id,buyNum} = req.body
+    let quantity = await selectQuantity(item_id,decode.user_id)
+    const sql = quantity?cart.updateQuantity:cart.insertIntoCart
+    quantity = parseInt(quantity)+parseInt(buyNum)
+    sqlQuery(sql,[quantity,item_id,decode.user_id], (err,result)=>{
+        if(err) console.error(err)
+        else{
+            if(result.affectedRows > 0){
+                console.log('商品加入购物车成功')
+                res.send({status:200,errorCode:'updateItemfromCart.success',sql:sql,quantity:quantity}).end();
+            }else{
+                console.log('商品加入购物车失败')
+                res.send({status:400,errorCode:'updateItemfromCart.non-success',msg:'商品加入购物车失败'}).end();
+            }
+        }
+    })
+})
+router.get('/updateQuantity',async (req,res)=>{
+    let decode = await getUserInfo(req.headers.authorization)
+    let {item_id,num} = req.query
+    sqlQuery(cart.updateQuantity,[num,item_id,decode.user_id], (err,result)=>{
+        if(err) console.error(err)
+        else{
+            if(result.affectedRows > 0){
+                console.log('购物车商品数量更新成功')
+                res.send({status:200,errorCode:'updateCartItemQuantity.success',msg:'购物车商品数量更新成功'}).end();
+            }else{
+                console.log('购物车商品数量更新失败')
+                res.send({status:400,errorCode:'updateCartItemQuantity.non-success',msg:'购物车商品数量更新失败'}).end();
+            }
+        }
+    })
+})
+router.get('/deleteCartItem',async (req,res)=>{
+    let decode = await getUserInfo(req.headers.authorization)
+    let items_id = req.query.items_id.toString()
+    let sql;
+    if(items_id.includes(',')){ // 多商品删除，拼接sql——in ('XX','XX')
+        sql = `DELETE FROM cart where user_id=${decode.user_id} and item_id in (`
+        items_id = items_id.split(',')
+        let i = 0;
+        for(; i<items_id.length-1; i++){
+            sql += `'${items_id[i]}',`
+        }
+        sql += `'${items_id[i]}')`
+    }else{ // 单商品删除
+        sql = `DELETE FROM cart where user_id=${decode.user_id} and item_id = '${items_id}'`
+    }
+    delCartItemQuery(sql, (err,result)=>{
+        if(err) console.error(err)
+        else{
+            if(result.affectedRows > 0){
+                console.log('从购物车删除商品成功')
+                res.send({status:200,errorCode:'deleteCartItem.success',msg:'从购物车删除商品成功',sql:sql}).end();
+            }else{
+                console.log('从购物车删除商品失败')
+                res.send({status:400,errorCode:'deleteCartItem.non-success',msg:'从购物车删除商品失败'}).end();
+            }
+        }
+    })
+})
 module.exports = function (){
     return router;
 }
