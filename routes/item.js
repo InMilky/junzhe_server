@@ -1,5 +1,5 @@
 const express = require('express');
-const {sqlQuery} = require("./databases");
+const {sqlQuery} = require("../utils/databases");
 const fs = require('fs')
 const path = require('path')
 const multer = require('multer');

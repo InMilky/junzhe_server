@@ -1,8 +1,7 @@
 const express = require('express');
-const {sqlQuery,delCartItemQuery} = require("./databases");
+const {sqlQuery,selfjointSQL} = require("../utils/databases");
 const {cart} =  require('../utils/sql');
 const {selectQuantity, getUserInfo} = require('../utils/fn')
-const db = require("mysql/lib/Pool");
 
 const router = express.Router();
 
@@ -12,13 +11,8 @@ router.get('/getCart',async (req,res)=>{
     sqlQuery(sql,[decode.user_id], (err,result)=>{
         if(err) console.error(err)
         else{
-            if(result.length<=0){
-                console.log('获取购物车信息失败')
-                res.send({status:400,errorCode:'getCart.non-success',msg:'获取购物车信息失败'}).end();
-            }else{
-                console.log('获取购物车信息成功')
-                res.send({status:200,errorCode:'getCart.success',msg:'获取购物车信息成功',data:result}).end();
-            }
+            console.log('获取购物车信息成功,length = '+result.length)
+            res.send({status:200,errorCode:'getCart.success',msg:'获取购物车信息成功',data:result}).end();
         }
     })
 })
@@ -26,7 +20,7 @@ router.post('/updateCart',async (req,res)=>{
     let decode = await getUserInfo(req.headers.authorization)
     let {item_id,buyNum} = req.body
     let quantity = await selectQuantity(item_id,decode.user_id)
-    const sql = quantity?cart.updateQuantity:cart.insertIntoCart
+    const sql = quantity?cart.updateCartItem:cart.insertIntoCart
     quantity = parseInt(quantity)+parseInt(buyNum)
     sqlQuery(sql,[quantity,item_id,decode.user_id], (err,result)=>{
         if(err) console.error(err)
@@ -43,8 +37,8 @@ router.post('/updateCart',async (req,res)=>{
 })
 router.get('/updateQuantity',async (req,res)=>{
     let decode = await getUserInfo(req.headers.authorization)
-    let {item_id,num} = req.query
-    sqlQuery(cart.updateQuantity,[num,item_id,decode.user_id], (err,result)=>{
+    let {cart_id,num} = req.query
+    sqlQuery(cart.updateQuantity,[num,cart_id,decode.user_id], (err,result)=>{
         if(err) console.error(err)
         else{
             if(result.affectedRows > 0){
@@ -59,20 +53,19 @@ router.get('/updateQuantity',async (req,res)=>{
 })
 router.get('/deleteCartItem',async (req,res)=>{
     let decode = await getUserInfo(req.headers.authorization)
-    let items_id = req.query.items_id.toString()
+    let {carts_id} = req.query
     let sql;
-    if(items_id.includes(',')){ // 多商品删除，拼接sql——in ('XX','XX')
-        sql = `DELETE FROM cart where user_id=${decode.user_id} and item_id in (`
-        items_id = items_id.split(',')
+    if(carts_id.length>1) {
+        sql = `DELETE FROM cart where user_id=${decode.user_id} and ID in (`
         let i = 0;
-        for(; i<items_id.length-1; i++){
-            sql += `'${items_id[i]}',`
+        for(; i<carts_id.length-1; i++){
+            sql += `'${carts_id[i]}',`
         }
-        sql += `'${items_id[i]}')`
+        sql += `'${carts_id[i]}')`
     }else{ // 单商品删除
-        sql = `DELETE FROM cart where user_id=${decode.user_id} and item_id = '${items_id}'`
+        sql = `DELETE FROM cart where user_id=${decode.user_id} and ID = '${carts_id}'`
     }
-    delCartItemQuery(sql, (err,result)=>{
+    selfjointSQL(sql, (err,result)=>{
         if(err) console.error(err)
         else{
             if(result.affectedRows > 0){

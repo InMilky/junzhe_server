@@ -24,18 +24,28 @@ const item = {
   getMiaosha:'select * from item where isMiaosha = 1 and m_price order by m_price DESC'
 }
 const cart = {
-  select: 'select item_id,title,price,m_price,quantity,color,img_url from cart inner join item where item.ID = cart.item_id and user_id = ?',
+  select: 'select cart.ID,item_id,title,price,m_price,quantity,color,img_url ' +
+      'from cart inner join item where item.ID = cart.item_id and user_id = ?',
   selectQuantity: 'select quantity from cart where item_id=? and user_id = ?',
   insertIntoCart:'INSERT INTO cart(quantity,item_id,user_id) VALUES(?,?,?)',
-  updateQuantity:'update cart set quantity=? where item_id=? and user_id=?',
-  deleteCartItem: 'DELETE FROM cart where user_id=? and item_id in (?)'
+  updateCartItem:'update cart set quantity=? where item_id=? and user_id=?',
+  updateQuantity:'update cart set quantity=? where ID=? and user_id=?',
+  getCartItem:'select item_id,quantity from cart where user_id=17 and ID in (?)'
 }
 const order = {
-  // select: 'select title,price,m_price,quantity,color,img_url,from order left join item where item.ID = cart.item_id and user_id = ?',
-  select: 'select * from order where user_id = ?',
-  insertOrderItemInfo:'INSERT INTO order(order_id,item_id,item_price,quantity) VALUES(?,?,?,?)',
-  insertOrderItem:'INSERT INTO order_detail(ID,account,user_id,ordertime) VALUES(?,?,?,?)',
-  updateOrderStatus:'update order set status=? where ID=?'
+  select: 'select orders.ID,ordertime,account,title,price,m_price,quantity,color,img_url,pay_state ' +
+      'from (order_detail LEFT join orders on orders.ID = order_detail.order_id) LEFT JOIN item ' +
+      'ON order_detail.item_id = item.ID where orders.user_id = ?',
+  getOrder:'select title,quantity,account ' +
+      'from (orders inner join order_detail on orders.ID = order_detail.order_id) inner join item ' +
+      'on order_detail.item_id = item.ID where order_id=? and user_id = ?',
+  insertOrder:'INSERT INTO orders(ID,account,user_id,ordertime) VALUES(?,?,?,?)',
+  updateOrderStatus:'update orders set pay_state=? where ID=? and user_id=?',
+  deleteOrder:'delete from orders where ID=? and user_id=?',
+  deleteOrderDetail:'delete from order_detail where order_id=?',
+  selectAutoValue:'select currentValue from auto_increment where name = "order_No"',
+  updateAutoValue:'update auto_increment set currentValue = currentValue+step where name = "order_No"',
+  getReceiver:'select name,telphone,address from receiver_info where user_id = ? and is_default = 1'
 }
 const miaosha={
   seckill_all:'select item_id,title,price,seckill_item.m_price,amount,seckill_item.sold_num,img_url ' +

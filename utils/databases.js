@@ -41,7 +41,7 @@ module.exports = {
             })
         })
     },
-    delCartItemQuery:function (sql,callback) {
+    selfjointSQL:function (sql,callback) {
         db.getConnection((err, connection) => {
             if (err) throw err;
             connection.query(sql,(err, result) => {

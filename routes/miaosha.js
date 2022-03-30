@@ -1,10 +1,9 @@
 const express = require('express');
-const {miaoshaQuery, redisdb} = require("./databases");
-const jwtUtil = require("./jwtUtils");
+const {miaoshaQuery, redisdb} = require("../utils/databases");
 const {item,miaosha} =  require('../utils/sql');
 const {getItem,getServerTime,getPromo} = require("../utils/fn");
 
-const redisClient = require("./redis");
+const redisClient = require("../utils/redis");
 const Redis = require("ioredis");
 const redis = new Redis(6379, "127.0.0.1");
 const miaosha_lua = require('../utils/miaosha_lua')(redis)
