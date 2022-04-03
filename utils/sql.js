@@ -36,11 +36,14 @@ const order = {
   select: 'select orders.ID,ordertime,account,title,price,m_price,quantity,color,img_url,pay_state ' +
       'from (order_detail LEFT join orders on orders.ID = order_detail.order_id) LEFT JOIN item ' +
       'ON order_detail.item_id = item.ID where orders.user_id = ?',
+  allOrder: 'select ID,ordertime,account,pay_state from orders where user_id = ?',
+  selectDetailByOrderID: 'select title,price,m_price,quantity,color,img_url ' +
+      'from order_detail LEFT JOIN item ON order_detail.item_id = item.ID where order_id = ?',
   getOrder:'select title,quantity,account ' +
       'from (orders inner join order_detail on orders.ID = order_detail.order_id) inner join item ' +
       'on order_detail.item_id = item.ID where order_id=? and user_id = ?',
   insertOrder:'INSERT INTO orders(ID,account,user_id,ordertime) VALUES(?,?,?,?)',
-  updateOrderStatus:'update orders set pay_state=? where ID=? and user_id=?',
+  payOrder:'update orders set pay_state=2 where ID=? and user_id=?',
   deleteOrder:'delete from orders where ID=? and user_id=?',
   deleteOrderDetail:'delete from order_detail where order_id=?',
   selectAutoValue:'select currentValue from auto_increment where name = "order_No"',

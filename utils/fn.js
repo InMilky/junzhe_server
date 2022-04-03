@@ -105,7 +105,6 @@ const getReceiver = (user_id) => {
         })
     })
 }
-
 const getAutoValue = () => {
     return new Promise((resolve,reject) => {
         let sql = order.selectAutoValue
@@ -165,6 +164,7 @@ const getCartItem = (carts_id,user_id) => {
         })
     })
 }
+
 const delCartItem = (carts_id,user_id) => {
     let sql;
     if(carts_id.length>1) { // 在购物车的多商品删除，拼接sql——in ('XX','XX')
@@ -177,7 +177,6 @@ const delCartItem = (carts_id,user_id) => {
     }else{ // 单商品删除
         sql = `delete from cart where user_id=${user_id} and ID = ${carts_id[0]}`
     }
-    console.log(carts_id,sql)
     return new Promise((resolve,reject) => {
         selfjointSQL(sql, (err,result)=>{
             if(err) console.error(err)
@@ -250,6 +249,7 @@ const deleteOrderDetail = (sql,order_id)=>{
             if(err) console.error(err)
             else{
                 if(result.affectedRows<=0){
+                    console.log("result",result)
                     console.error(err);
                     return reject(err)
                 }else{
@@ -259,22 +259,51 @@ const deleteOrderDetail = (sql,order_id)=>{
         })
     })
 }
+const allOrder = (user_id) => {
+    return new Promise((resolve,reject) => {
+        let sql = order.allOrder
+        sqlQuery(sql,[user_id],function (err,result){
+            if(err) console.error(err)
+            else{
+                if(result.length<=0){
+                    console.error(err);
+                    return reject(err)
+                }else{
+                    return resolve(result)
+                }
+            }
+        })
+    })
+
+}
+const allOrderDetail = (order_id) => {
+    return new Promise((resolve,reject) => {
+        let sql = order.selectDetailByOrderID
+        sqlQuery(sql,[order_id],function (err,result){
+            if(err) console.error(err)
+            else{
+                if(result.length<=0){
+                    console.error(err);
+                    return reject(err)
+                }else{
+                    return resolve(result)
+                }
+            }
+        })
+    })
+
+}
 
 module.exports = {
-    getUserInfo,
-    getUsername,
-    getItem,
-    getItemInfo,
+    getUserInfo, getUsername,
+    getItem, getItemInfo,
     getPromo,
     getServerTime,
-    getCartItem,
-    delCartItem,
+    getCartItem, delCartItem,
     selectQuantity,
     getReceiver,
-    insertOrder,
-    insertOrderDetail,
-    getAutoValue,
-    updateAutoValue,
-    deleteOrder,
-    deleteOrderDetail
+    insertOrder, insertOrderDetail,
+    getAutoValue, updateAutoValue,
+    deleteOrder, deleteOrderDetail,
+    allOrder,allOrderDetail
 }
