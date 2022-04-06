@@ -1,10 +1,11 @@
 const express = require('express');
-const {miaoshaQuery, redisdb} = require("../utils/databases");
+const {miaoshaQuery} = require("../utils/databases");
 const {item,miaosha} =  require('../utils/sql');
-const {getItem,getServerTime,getPromo} = require("../utils/fn");
+const {getItem, getUserInfo} = require("../utils/fn");
 
 const redisClient = require("../utils/redis");
 const Redis = require("ioredis");
+const {hmget, hset, hgetall} = require("../utils/redis");
 const redis = new Redis(6379, "127.0.0.1");
 const miaosha_lua = require('../utils/miaosha_lua')(redis)
 
@@ -23,44 +24,64 @@ router.get('/getSeckill',(req,res)=>{
         }
     })
 })
-router.get('/get/:key',async (req,res)=>{
-    const key = req.params.key
-    const result = await redisdb.get(key)
-    if(result){
-        res.send({status:200,msg:result})
-    }else{
-        res.send({status:400,msg:result})
-    }
-})
 router.post('/getItem',async (req,res)=>{
-    let ID = req.body.ID
-    let result  = await getItem(ID,item.getItem)
-    let time  = await getPromo(ID,miaosha.getPromo)
+    let {itemID} = req.body
+    let result  = await getItem(itemID,item.getItem)
     if(result){
-        res.send({status:200,errorCode:'getSeckillItem.success',msg:'获取秒杀商品信息成功',serverTime:getServerTime(),timeSeries:time,data:result}).end();
+        res.send({status:200,errorCode:'getSeckillItem.success',msg:'获取秒杀商品信息成功',data:result}).end();
     }else{
         res.send({status:400,errorCode:'getSeckillItem.non-success',msg:'该秒杀商品已售罄，请选择其他商品'}).end();
     }
 })
+router.get('/getSecTime',async (req,res)=>{
+    let {itemID} = req.query
+    let data = await hmget('miaosha:'+itemID,'start_date','end_date','activity','stock')
+    let [start_date,end_date,activityFlag,stock] = data
+    let serverTime = Date.now()
+    let startTime = new Date(start_date).getTime()
+    let endTime = new Date(end_date).getTime()
+    if(serverTime>=startTime && serverTime<=endTime && stock>0){
+        activityFlag = 1
+    }else if(serverTime>endTime || stock<=0){
+        activityFlag = 2
+    }else{
+        activityFlag = 0
+    }
+    await hset('miaosha:'+itemID,'activity',activityFlag)
+    // activityFlag=0活动未开始，1已经开始，2已结束
+    let diffTime = activityFlag==0?startTime-serverTime:endTime-serverTime
+    if(data){
+        res.send({status:200,errorCode:'getSecTime.success',msg:'获取秒杀活动时间成功',
+            data: {start_date:start_date,end_date:end_date,activityFlag:activityFlag,diffTime:diffTime,stock:stock}}).end();
+    }else{
+        res.send({status:400,errorCode:'getSecTime.non-success',msg:'获取秒杀活动时间失败'}).end();
+    }
+})
 
-router.get('/order',(req,res)=>{
-    let user_id= req.query.user_id
-    let item_id = "ff8f1a89-5e86-46bd-9f99-4d6b3eaaa9f4"
-    // user_id = 'miaosha-'+user_id
-    miaosha_lua.run('miaosha',user_id,item_id)
-        .then(result=>{
-            const data = [':库存不足',':商品秒杀成功',':已经购买该商品',':访问次数太多，请稍后再试',':排队中']
-            if(result){
-                console.log(result+"---"+user_id+data[result])
-                res.send({code:result,msg:user_id+data[result]}).end();
-            }else {
-                console.log(result+"---"+user_id+data[result])
-                res.send({code: result,msg: user_id + data[result]}).end();
-            }
-        }).catch(err=>{
+
+router.post('/order',async (req,res)=>{
+    let decode = await getUserInfo(req.headers.authorization)
+    let {itemID} = req.body
+    let user_id = decode.user_id
+    let username = decode.username
+    if(user_id==undefined || user_id==""){
+        res.send({status:401,msg: '请先登录再进行购买'}).end();
+    }else {
+        miaosha_lua.run('seckill', user_id, itemID)
+            .then(result => {
+                const data = ['：库存不足', '：商品秒杀成功', '：已经购买该商品，该商品限购一件', '：访问次数太多，请稍后再试', '：排队中']
+                if (result) {
+                    console.log(result + "---" + username + data[result])
+                    res.send({status:200,code: result, msg: username + data[result]}).end();
+                } else {
+                    console.log(result + "---" + username + data[result])
+                    res.send({status:400,code: result, msg: username + data[result]}).end();
+                }
+            }).catch(err => {
             console.error(err)
             Promise.reject(err)
         })
+    }
 })
 router.get('/checkout', async (req,res)=>{
     // let {user_id} = req.body
@@ -106,6 +127,13 @@ async function checkout(user_id,item_id){
         return value;
     }
 }
+
+router.get('/test',async (req,res)=>{
+    let {itemID} = req.query
+    let data = await hset('miaosha:'+itemID,'start_date','2022-04-05 15:25:00')
+    res.send({data:data}).end();
+
+})
 
 module.exports = function (){
     return router;

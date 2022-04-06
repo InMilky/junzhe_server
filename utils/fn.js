@@ -5,7 +5,9 @@ const {sqlQuery,miaoshaQuery, selfjointSQL} = require("./databases");
 
 const getUserInfo = function(token){
     let decode = jwtUtil.verify(token)
-    return new Promise((resolve => resolve({user_id:decode.client_id,username:decode.username})))
+    return new Promise(
+        (resolve => resolve({user_id:decode.client_id,username:decode.username}))
+    ).catch(()=>{Promise.reject('尚未登录或者登录已失效，请先进行登录再操作')})
 }
 const getUsername = (ID)=>{
     const sql = user.table.queryByUserID
@@ -22,22 +24,19 @@ const getUsername = (ID)=>{
 }
 const getItem = (ID,sql) => {
     return new Promise((resolve,reject) => {
-        sqlQuery(sql, [ID],async function (err,result){
-            if(err) console.error(err)
-            else{
-                if(result.length<=0){
-                    console.error(err);
-                    return reject(err)
-                }else{
-                    let detail = await getItemInfo(ID)
-                    if(detail){
-                        result[0]['detail']=detail
-                    }
-                    return resolve(result[0])
+        sqlQuery(sql, [ID],async function (err, result) {
+            if (result.length > 0) {
+                let detail = await getItemInfo(ID)
+                if (detail) {
+                    result[0]['detail'] = detail
                 }
+                return resolve(result[0])
+            } else {
+                console.error(err);
+                return reject(err)
             }
         })
-    })
+    }).catch(()=>{})
 }
 const getItemInfo = (ID)=>{
     let sql = item.getItemInfo
@@ -47,17 +46,12 @@ const getItemInfo = (ID)=>{
                 let brief_img = result[0].brief.split(';')
                 result[0]['brief_img'] = brief_img
                 delete result[0]['brief']
-                delete result[0]['ID']
                 resolve(result[0])
             }else{
                 resolve('')
             }
         })
-    })
-}
-// 获取服务器时间，由于计算与客户端的时间差
-const getServerTime =  ()=>{
-    return Date.now()
+    }).catch(()=>{})
 }
 // 获取活动时间
 const getPromo = (ID,sql) => {
@@ -298,7 +292,6 @@ module.exports = {
     getUserInfo, getUsername,
     getItem, getItemInfo,
     getPromo,
-    getServerTime,
     getCartItem, delCartItem,
     selectQuantity,
     getReceiver,

@@ -13,9 +13,11 @@ const user = {
 }
 const item = {
   search:'select * from item where title like "%"?"%" order by price DESC', //根据名字升序降序
-  getItem:'select * from item where ID = ?',
   getCartItem:'select title,color,m_price,price,img_url from item where ID = ?',
-  getItemInfo:'select * from item_detail where ID = ?',
+  // getItem:'select * from item where ID = ?',
+  // getItemInfo:'select * from item_detail where ID = ?',
+  getItem:'select ID,title,brand,price,m_price,sold_num,img_url,description from item where ID = ?',
+  getItemInfo:'select item_no,brand,color,publish_date,feature,size,brief,details from item_detail where ID = ?',
   getCarousel:'select * from carousel',
   getSpecial:'select * from item order by m_price DESC limit ?,?',
   getBrand:'select * from brand order by level DESC limit 6',
@@ -36,7 +38,7 @@ const order = {
   select: 'select orders.ID,ordertime,account,title,price,m_price,quantity,color,img_url,pay_state ' +
       'from (order_detail LEFT join orders on orders.ID = order_detail.order_id) LEFT JOIN item ' +
       'ON order_detail.item_id = item.ID where orders.user_id = ?',
-  allOrder: 'select ID,ordertime,account,pay_state from orders where user_id = ?',
+  allOrder: 'select ID,ordertime,account,pay_state from orders where user_id = ? order by ordertime DESC',
   selectDetailByOrderID: 'select title,price,m_price,quantity,color,img_url ' +
       'from order_detail LEFT JOIN item ON order_detail.item_id = item.ID where order_id = ?',
   getOrder:'select title,quantity,account ' +
@@ -53,7 +55,9 @@ const order = {
 const miaosha={
   seckill_all:'select item_id,title,price,seckill_item.m_price,amount,seckill_item.sold_num,img_url ' +
       'from seckill_item left join item on item.ID = seckill_item.item_id order by m_price DESC',
-  getPromo:'select start_date,end_date from seckill_promo where ID= (select promo_id from seckill_item where item_id =?)'
+  getPromo:'select start_date,end_date from seckill_promo where ID= (select promo_id from seckill_item where item_id =?)',
+  getItem:'select ID,title,brand,price,m_price,sold_num,img_url,description from item where ID = ?',
+  getItemInfo:'select item_no,brand,color,publish_date,feature,size,brief,details from item_detail where ID = ?',
 }
 module.exports = {
   user,

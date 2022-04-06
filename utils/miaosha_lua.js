@@ -45,33 +45,43 @@ instance.script.miaosha = {
     `,
     keysLength:2
 }
-instance.script.test = {
+/**
+ * 使用 hash表 存储该秒杀商品信息 item_info
+ *     开始时间start_date:'2022-02-22 05:11:29'
+ *     结束时间end_date:'2022-02-22 23:29:05'
+ *     活动开启标志flag-0未开启、1-已开启、-1已结束
+ *     库存stock:10
+ *     phone:num 用户访问次数
+ *  使用 set集合 存储已购买该秒杀商品的用户集合 user_exists
+ * @type {{code: string, keysLength: number}}
+ */
+instance.script.seckill = {
     code: `
-        local user_id = KEYS[1]
-        redis.call('setnx',user_id,0)
-        local num = redis.call( 'incr', user_id )
-        if  (tonumber(num) >5)  then
-            redis.call('expire', user_id, 30) 
+        local user_id  = KEYS[1]
+        local item_id = KEYS[2]
+        local item_info = "miaosha:"..item_id
+        local user_exists = "miaosha:"..item_id..":users"
+        redis.call('hsetnx',item_info,user_id,0)
+        local num = redis.call( 'hincrby',item_info, user_id ,1)  
+        if  (tonumber(num) >1)  then
+            return 3
+        end
+        local user_num = redis.call( 'sismember', user_exists, user_id ) 
+        if  tonumber (user_num, 10) == 1  then
             return 2
+        end
+        local left_items_count = redis.call( 'hget', item_info ,'stock')
+        if tonumber( left_items_count, 10 ) <= 0  then
+            return 0
+        else
+            redis.call( 'hincrby', item_info,'stock',-1)
+            redis.call( 'sadd', user_exists, user_id )
         end
         return 1
     `,
     keysLength:2
 }
 
-instance.run2 = function (lua_name,...params){
-    return new Promise(async (resolve,reject) =>{
-        if (!redisClient) {
-            reject('redisClient is no ready');
-        } else if (!instance.script[lua_name]) {
-            reject('this command is not supported');
-        } else {
-            const sha = await scriptLua(lua_name)
-            const result = await evalLua(sha,lua_name,...params)
-            resolve(result)
-        }
-    })
-}
 instance.run = function (lua_name,...params){
     return new Promise(async (resolve,reject) =>{
         if (!redisClient) {

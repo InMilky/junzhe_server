@@ -115,7 +115,7 @@ function hset(table,key,value) {
             reject("value 不能为 undefined");
             return;
         };
-        redisdb.hset(key, value, (err, result) => {
+        redisdb.hset(table,key, value, (err, result) => {
             err && reject(err);
             resolve(result);
         });
@@ -123,11 +123,8 @@ function hset(table,key,value) {
 }
 function hmset(table,params){
     return new Promise((resolve,reject)=> {
-        redisdb.hmset(table, (err, result) => {
+        redisdb.hmset(table,params, (err, result) => {
             err && reject(err);
-            if(result && result.startsWith("{")){
-                result = JSON.parse(result)
-            }
             resolve(result);
         });
     })
@@ -143,14 +140,27 @@ function hkeys(table) {
 
     })
 }
-function hgetall(table,value){
+function hget(table,field){
+    return new Promise((resolve,reject)=> {
+        redisdb.hget(table, field,(err, result) => {
+            err && reject(err);
+            resolve(result);
+        });
+    })
+}
+function hmget(table,...fileds){
+    return new Promise((resolve,reject)=> {
+        redisdb.hmget(table, ...fileds,(err, result) => {
+            err && reject(err);
+            resolve(result); // result得到的是数组[]
+        });
+    })
+}
+function hgetall(table){
     return new Promise((resolve,reject)=> {
         redisdb.hgetall(table, (err, result) => {
             err && reject(err);
-            if(result && result.startsWith("{")){
-                result = JSON.parse(result)
-            }
-            resolve(result);
+            resolve(result); // result得到的是对象{}
         });
     })
 }
@@ -240,6 +250,6 @@ module.exports = {
     set,get,expire,ttl,
     lpush,lrange, lpop,
     sadd,smembers,srem,sismember,
-    hset,hmset,hgetall,hkeys,
+    hset,hmset,hget,hmget,hgetall,hkeys,
     setnx,incr,decr
 }

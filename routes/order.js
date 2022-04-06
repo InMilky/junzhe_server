@@ -98,12 +98,13 @@ router.post('/checkout',async (req,res)=>{
     let order_id = nowtime+autoValue+Math.floor((Math.random() * 100))
     let ordertime = chinaTime('YYYY-MM-DD HH:mm:ss');
     let order_details = []
-    let result3
+    let result3 = {}
     if(ID instanceof Array){
         order_details = await getCartItem(ID,decode.user_id)
         result3 = await delCartItem(ID, decode.user_id)
     }else{
         order_details = [{'item_id':ID,'quantity':quantity}]
+        result3.affectedRows = 1
     }
     order_details = order_details.map(item=>{
         item['order_id'] = order_id
@@ -113,11 +114,12 @@ router.post('/checkout',async (req,res)=>{
     let result2= await insertOrderDetail(order_details)
     if(result1.affectedRows > 0 && result2.affectedRows>0 && result3.affectedRows>0){
         //为该订单设置支付时间存储到redis中
-        await setnx(order_id, ordertime)
-        await expire(order_id, 300)
-        res.send({status:200,errorCode:'payOrder.success',msg:'支付订单成功',data:order_id}).end();
+        let key = "orderID:"+order_id+":ordertime"
+        await setnx(key, ordertime)
+        await expire(key, 300)
+        res.send({status:200,errorCode:'createOrder.success',msg:'生成订单成功',data:order_id}).end();
     }else{
-        res.send({status:400,errorCode:'payOrder.non-success',msg:'支付订单失败'}).end();
+        res.send({status:400,errorCode:'createOrder.non-success',msg:'生成订单失败'}).end();
     }
 })
 router.get('/getReceiver',async (req, res) => {
@@ -153,11 +155,11 @@ router.post('/payOrder',async (req,res)=>{
         }
     })
 })
-router.get('/deleteOrder',async (req,res)=>{
+router.post('/deleteOrder',async (req,res)=>{
     let decode = await getUserInfo(req.headers.authorization)
-    let {order_id} = req.query
-    let result1 = await deleteOrder(order.deleteOrder,order_id,decode.user_id)
-    let result2 = await deleteOrderDetail(order.deleteOrderDetail,order_id)
+    let {orderID} = req.body
+    let result1 = await deleteOrder(order.deleteOrder,orderID,decode.user_id)
+    let result2 = await deleteOrderDetail(order.deleteOrderDetail,orderID)
     if(result1.affectedRows>0 && result2.affectedRows>0){
         console.log('删除订单成功')
         res.send({status:200,errorCode:'getOrder.success',msg:'删除订单成功'}).end();
@@ -166,10 +168,17 @@ router.get('/deleteOrder',async (req,res)=>{
         res.send({status:400,errorCode:'getOrder.non-success',msg:'删除订单失败'}).end();
     }
 })
-router.post('/getTTl',async (req,res)=>{
-
-    let ID = req.body.ID
-    let result = await ttl(ID)
+// 从redis中获取订单支付的剩余时间
+router.get('/getTTl',async (req,res)=>{
+    let ID = req.query.ID
+    let key = "orderID:"+ID+":ordertime"
+    let result = await ttl(key)
+    res.send({status:200,data:result}).end()
+})
+router.get('/delTTl',async (req,res)=>{
+    let ID = req.query.ID
+    let key = "orderID:"+ID+":ordertime"
+    let result = await expire(key, 0)
     res.send({status:200,data:result}).end()
 })
 
