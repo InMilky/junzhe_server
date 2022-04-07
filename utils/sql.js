@@ -58,6 +58,8 @@ const miaosha={
   getPromo:'select start_date,end_date from seckill_promo where ID= (select promo_id from seckill_item where item_id =?)',
   getItem:'select ID,title,brand,price,m_price,sold_num,img_url,description from item where ID = ?',
   getItemInfo:'select item_no,brand,color,publish_date,feature,size,brief,details from item_detail where ID = ?',
+  insertOrder:'INSERT INTO seckill_order(order_id,user_id,item_id,amount,order_price,ordertime) VALUES(?,?,?,?,?,?)',
+  insertOrderDetail:'INSERT INTO order_detail(order_id,item_id,quantity) VALUES(?,?,?)',
 }
 module.exports = {
   user,

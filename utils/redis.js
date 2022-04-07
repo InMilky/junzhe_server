@@ -131,13 +131,19 @@ function hmset(table,params){
 }
 //遍历哈希表"hash key"
 function hkeys(table) {
-    redisdb.hkeys(table, function (err, result) {
-        console.log(result.length + " result:");
-        result.forEach(function (item, index) {
-            console.log("    " + index + ": " + item);
-        });
-        redisdb.hget("hash key", "hashtest 1", redis.print);
-
+    return new Promise((resolve,reject)=> {
+        redisdb.hkeys(table, function (err, result) {
+            err && reject(err);
+            resolve(result);
+        })
+    })
+}
+function hvals(table) {
+    return new Promise((resolve,reject)=> {
+        redisdb.hvals(table, function (err, result) {
+            err && reject(err);
+            resolve(result);
+        })
     })
 }
 function hget(table,field){
@@ -192,9 +198,6 @@ function smembers(key){
     return new Promise((resolve,reject)=> {
         redisdb.smembers(key, (err, result) => {
             err && reject(err);
-            if(result && result.startsWith("{")){
-                result = JSON.parse(result)
-            }
             resolve(result);
         });
     })
@@ -211,9 +214,6 @@ function srem(key,value){
     return new Promise((resolve,reject)=> {
         redisdb.srem(key, value, (err, result) => {
             err && reject(err);
-            if(result && result.startsWith("{")){
-                result = JSON.parse(result)
-            }
             resolve(result);
         });
     })
@@ -250,6 +250,6 @@ module.exports = {
     set,get,expire,ttl,
     lpush,lrange, lpop,
     sadd,smembers,srem,sismember,
-    hset,hmset,hget,hmget,hgetall,hkeys,
+    hset,hmset,hget,hmget,hgetall,hkeys,hvals,
     setnx,incr,decr
 }

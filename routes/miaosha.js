@@ -1,11 +1,12 @@
 const express = require('express');
 const {miaoshaQuery} = require("../utils/databases");
 const {item,miaosha} =  require('../utils/sql');
-const {getItem, getUserInfo} = require("../utils/fn");
+const {getItem, getUserInfo, getAutoValue, insertOrder, insertOrderDetail, insertSeckillOrder, insertSeckillOrderDetail} = require("../utils/fn");
 
 const redisClient = require("../utils/redis");
 const Redis = require("ioredis");
-const {hmget, hset, hgetall} = require("../utils/redis");
+const {hmget, hset, smembers, hget, hkeys, hvals, setnx, expire} = require("../utils/redis");
+const chinaTime = require("china-time");
 const redis = new Redis(6379, "127.0.0.1");
 const miaosha_lua = require('../utils/miaosha_lua')(redis)
 
@@ -67,7 +68,8 @@ router.post('/order',async (req,res)=>{
     if(user_id==undefined || user_id==""){
         res.send({status:401,msg: '请先登录再进行购买'}).end();
     }else {
-        miaosha_lua.run('seckill', user_id, itemID)
+        let ordertime = chinaTime('YYYY-MM-DD HH:mm:ss');
+        miaosha_lua.run('seckill', user_id, itemID,ordertime)
             .then(result => {
                 const data = ['：库存不足', '：商品秒杀成功', '：已经购买该商品，该商品限购一件', '：访问次数太多，请稍后再试', '：排队中']
                 if (result) {
@@ -83,6 +85,28 @@ router.post('/order',async (req,res)=>{
         })
     }
 })
+
+
+router.post('/insertOrders',async (req,res)=>{
+    let {itemID} = req.body
+    let users = await hkeys('miaosha:'+itemID+':users')
+    let ordertimes = await hvals('miaosha:'+itemID+':users')
+    let price = await hget('miaosha:'+itemID,'price')
+    for(let i=0; i<users.length; i++){
+        // 生成order_id
+        let ordertime = ordertimes[i].split(" ")[0].replace(/(\d+)-(\d+)-(\d+)/g,'$1$2$3')
+        let autoValue = await getAutoValue()
+        let order_id = ordertime+autoValue+Math.floor((Math.random() * 100))
+        // {'order_id':order_id,'user_id':user_id,'item_id':itemID,'amount':price,'order_price':price,'ordertime':ordertime}
+        await insertSeckillOrder(order_id,users[i],itemID,price,price,ordertimes[i])
+        await insertOrder(order_id,price,users[i],ordertimes[i])
+        //{'item_id':ID,'quantity':quantity,'order_id':order_id}
+        await insertSeckillOrderDetail(order_id,itemID,1)
+    }
+    res.send({status:200,errorCode:'saveSeckillOrder.success',msg:'存储订单成功'}).end();
+   // res.send({status:200,data:users}).end();
+})
+
 router.get('/checkout', async (req,res)=>{
     // let {user_id} = req.body
     let user_id= req.query.user_id
@@ -130,9 +154,8 @@ async function checkout(user_id,item_id){
 
 router.get('/test',async (req,res)=>{
     let {itemID} = req.query
-    let data = await hset('miaosha:'+itemID,'start_date','2022-04-05 15:25:00')
+    let data = await smembers('miaosha:'+itemID,'start_date','2022-04-05 15:25:00')
     res.send({data:data}).end();
-
 })
 
 module.exports = function (){

@@ -1,5 +1,5 @@
 const jwtUtil = require("./jwtUtils");
-const {user, item, cart, order} = require("./sql");
+const {user, item, cart, order, miaosha} = require("./sql");
 const {sqlQuery,miaoshaQuery, selfjointSQL} = require("./databases");
 
 
@@ -185,6 +185,38 @@ const delCartItem = (carts_id,user_id) => {
         })
     })
 }
+const insertSeckillOrder = (order_id,user_id,item_id,account,price,ordertime)=>{
+    const sql = miaosha.insertOrder
+    return new Promise((resolve,reject) => {
+        miaoshaQuery(sql, [order_id,user_id,item_id,account,price,ordertime], function (err,result){
+            if(err) console.error(err)
+            else{
+                if(result.affectedRows<=0){
+                    console.error(err);
+                    return reject(err)
+                }else{
+                    return resolve(result)
+                }
+            }
+        })
+    })
+}
+const insertSeckillOrderDetail = (order_id,item_id,quantity)=>{
+    const sql = miaosha.insertOrderDetail
+    return new Promise((resolve,reject) => {
+        sqlQuery(sql, [order_id,item_id,quantity], function (err,result){
+            if(err) console.error(err)
+            else{
+                if(result.affectedRows<=0){
+                    console.error(err);
+                    return reject(err)
+                }else{
+                    return resolve(result)
+                }
+            }
+        })
+    })
+}
 const insertOrder = (order_id,account,user_id,ordertime)=>{
     const sql = order.insertOrder
     return new Promise((resolve,reject) => {
@@ -296,6 +328,7 @@ module.exports = {
     selectQuantity,
     getReceiver,
     insertOrder, insertOrderDetail,
+    insertSeckillOrder,insertSeckillOrderDetail,
     getAutoValue, updateAutoValue,
     deleteOrder, deleteOrderDetail,
     allOrder,allOrderDetail

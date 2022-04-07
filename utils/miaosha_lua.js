@@ -59,14 +59,16 @@ instance.script.seckill = {
     code: `
         local user_id  = KEYS[1]
         local item_id = KEYS[2]
+        local order_time = KEYS[3]
+        local user_time  = "ordertime:"..user_id
         local item_info = "miaosha:"..item_id
         local user_exists = "miaosha:"..item_id..":users"
         redis.call('hsetnx',item_info,user_id,0)
         local num = redis.call( 'hincrby',item_info, user_id ,1)  
-        if  (tonumber(num) >1)  then
+        if  (tonumber(num) >2)  then
             return 3
         end
-        local user_num = redis.call( 'sismember', user_exists, user_id ) 
+        local user_num = redis.call( 'hexists', user_exists, user_id ) 
         if  tonumber (user_num, 10) == 1  then
             return 2
         end
@@ -75,11 +77,11 @@ instance.script.seckill = {
             return 0
         else
             redis.call( 'hincrby', item_info,'stock',-1)
-            redis.call( 'sadd', user_exists, user_id )
+            redis.call('hsetnx',user_exists,user_id, order_time)
         end
         return 1
     `,
-    keysLength:2
+    keysLength:3
 }
 
 instance.run = function (lua_name,...params){
