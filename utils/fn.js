@@ -6,9 +6,10 @@ const {sqlQuery,miaoshaQuery, selfjointSQL} = require("./databases");
 const getUserInfo = function(token){
     let decode = jwtUtil.verify(token)
     return new Promise(
-        (resolve => resolve({user_id:decode.client_id,username:decode.username}))
+        (resolve => resolve(decode))
     ).catch(()=>{Promise.reject('尚未登录或者登录已失效，请先进行登录再操作')})
 }
+
 const getUsername = (ID)=>{
     const sql = user.table.queryByUserID
     return new Promise((resolve,reject) => {
@@ -217,6 +218,23 @@ const insertSeckillOrderDetail = (order_id,item_id,quantity)=>{
         })
     })
 }
+const updateStock = (amount,sold_num,item_id)=>{
+    const sql = miaosha.updateStock
+    return new Promise((resolve,reject) => {
+        sqlQuery(sql, [amount,sold_num,item_id], function (err,result){
+            if(err) console.error(err)
+            else{
+                if(result.affectedRows<=0){
+                    console.error(err);
+                    return reject(err)
+                }else{
+                    return resolve(result)
+                }
+            }
+        })
+    })
+}
+
 const insertOrder = (order_id,account,user_id,ordertime)=>{
     const sql = order.insertOrder
     return new Promise((resolve,reject) => {
@@ -275,7 +293,6 @@ const deleteOrderDetail = (sql,order_id)=>{
             if(err) console.error(err)
             else{
                 if(result.affectedRows<=0){
-                    console.log("result",result)
                     console.error(err);
                     return reject(err)
                 }else{
@@ -328,7 +345,7 @@ module.exports = {
     selectQuantity,
     getReceiver,
     insertOrder, insertOrderDetail,
-    insertSeckillOrder,insertSeckillOrderDetail,
+    insertSeckillOrder,insertSeckillOrderDetail,updateStock,
     getAutoValue, updateAutoValue,
     deleteOrder, deleteOrderDetail,
     allOrder,allOrderDetail

@@ -60,6 +60,7 @@ const miaosha={
   getItemInfo:'select item_no,brand,color,publish_date,feature,size,brief,details from item_detail where ID = ?',
   insertOrder:'INSERT INTO seckill_order(order_id,user_id,item_id,amount,order_price,ordertime) VALUES(?,?,?,?,?,?)',
   insertOrderDetail:'INSERT INTO order_detail(order_id,item_id,quantity) VALUES(?,?,?)',
+  updateStock:'update seckill_item set amount=?,sold_num=? where item_id=?'
 }
 module.exports = {
   user,

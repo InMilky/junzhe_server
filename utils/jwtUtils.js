@@ -37,8 +37,7 @@
 
 const jwt = require('jsonwebtoken');
 const SECRET_KEY ='gongJUN&ZHANGzheHan.love051129FOREVER!jzp*REAL1640'
-const expiresIn = 3600*2
-function sign(payload){
+function sign(payload,expiresIn){
     let token = jwt.sign(payload,SECRET_KEY,{expiresIn:expiresIn});
     return token;
 }

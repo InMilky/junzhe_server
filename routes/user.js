@@ -23,7 +23,7 @@ router.post('/signin',(req,res)=>{
             }else if(result[0].telphone===telphone && result[0].encrypt_password === password){
                 console.log(telphone+"：登录成功");
                 let user = await getUsername(result[0].user_id)
-                let jwt_token = jwtUtil.sign({'client_id':result[0].user_id,'username':user.username});
+                let jwt_token = jwtUtil.sign({'user_id':result[0].user_id,'username':user.username},3600*2);
                 res.send({status:200,errorCode:'ok',msg:'登录成功',username:user.username,token:jwt_token}).end();
             }else {
                 console.log(telphone+"：登录失败，账号或者密码错误");
@@ -74,18 +74,7 @@ router.get('/getuser',async (req,res)=>{
     if(username){
         res.send({status: 200, errorCode: 'ok', msg: '获取用户信息成功',username:username}).end();
     }else{
-	    // res.sendStatus(401);
         res.send({status: 401, errorCode: 'non-get.userInfo', msg: '登录已失效，请重新登录',data:decode}).end();
-    }
-})
-
-router.get('/test',async (req,res)=>{
-    let token = req.headers.authorization;
-    let decode = await getUserInfo(token)
-    if(decode){
-        res.send({status: 200, errorCode: 'ok', msg: decode}).end();
-    }else{
-        res.send({status: 400, errorCode: 'non-get.userInfo', msg: decode}).end();
     }
 })
 

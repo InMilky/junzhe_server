@@ -1,12 +1,15 @@
 const express = require('express');
 const {miaoshaQuery} = require("../utils/databases");
 const {item,miaosha} =  require('../utils/sql');
-const {getItem, getUserInfo, getAutoValue, insertOrder, insertOrderDetail, insertSeckillOrder, insertSeckillOrderDetail} = require("../utils/fn");
+const {getItem, getUserInfo, getAutoValue, insertOrder, insertOrderDetail, insertSeckillOrder, insertSeckillOrderDetail,
+    updateStock
+} = require("../utils/fn");
 
 const redisClient = require("../utils/redis");
 const Redis = require("ioredis");
-const {hmget, hset, smembers, hget, hkeys, hvals, setnx, expire} = require("../utils/redis");
+const {hmget, hset, smembers, hget, hkeys, hvals, setnx, expire, set, get} = require("../utils/redis");
 const chinaTime = require("china-time");
+const jwtUtil = require("../utils/jwtUtils");
 const redis = new Redis(6379, "127.0.0.1");
 const miaosha_lua = require('../utils/miaosha_lua')(redis)
 
@@ -31,66 +34,95 @@ router.post('/getItem',async (req,res)=>{
     if(result){
         res.send({status:200,errorCode:'getSeckillItem.success',msg:'获取秒杀商品信息成功',data:result}).end();
     }else{
-        res.send({status:400,errorCode:'getSeckillItem.non-success',msg:'该秒杀商品已售罄，请选择其他商品'}).end();
+        res.send({status:400,errorCode:'getSeckillItem.non-success',msg:'该秒杀商品不存在，请选择其他商品'}).end();
     }
 })
-router.get('/getSecTime',async (req,res)=>{
-    let {itemID} = req.query
+router.post('/getSecTime',async (req,res)=>{
+    let {itemID} = req.body
     let data = await hmget('miaosha:'+itemID,'start_date','end_date','activity','stock')
     let [start_date,end_date,activityFlag,stock] = data
     let serverTime = Date.now()
     let startTime = new Date(start_date).getTime()
     let endTime = new Date(end_date).getTime()
-    if(serverTime>=startTime && serverTime<=endTime && stock>0){
-        activityFlag = 1
-    }else if(serverTime>endTime || stock<=0){
-        activityFlag = 2
-    }else{
-        activityFlag = 0
+    if(activityFlag) {
+        if (serverTime >= startTime && serverTime <= endTime && stock > 0) {
+            const randomnum = (51129+Math.random()*51129164033) //生成随机数，进入doSeckill
+            const doSeckillRandom = (randomnum+serverTime).toString(32);
+            await setnx('miaosha:' + itemID + ':doSeckillKey', doSeckillRandom)
+            await expire('miaosha:' + itemID + ':doSeckillKey', 51)
+            activityFlag = 1
+        } else if (serverTime > endTime || stock <= 0) {
+            activityFlag = 2
+        } else {
+            activityFlag = 0
+        }
+        await hset('miaosha:' + itemID, 'activity', activityFlag)
     }
-    await hset('miaosha:'+itemID,'activity',activityFlag)
     // activityFlag=0活动未开始，1已经开始，2已结束
     let diffTime = activityFlag==0?startTime-serverTime:endTime-serverTime
-    if(data){
+    const doSeckillKey = await get('miaosha:'+itemID+':doSeckillKey')
+    if(activityFlag&&stock&&doSeckillKey){
         res.send({status:200,errorCode:'getSecTime.success',msg:'获取秒杀活动时间成功',
-            data: {start_date:start_date,end_date:end_date,activityFlag:activityFlag,diffTime:diffTime,stock:stock}}).end();
+            data: {start_date:start_date,end_date:end_date,activityFlag:activityFlag,diffTime:diffTime,stock:stock,doSeckillKey:doSeckillKey}}).end();
     }else{
         res.send({status:400,errorCode:'getSecTime.non-success',msg:'获取秒杀活动时间失败'}).end();
     }
 })
 
-
-router.post('/order',async (req,res)=>{
-    let decode = await getUserInfo(req.headers.authorization)
-    let {itemID} = req.body
-    let user_id = decode.user_id
-    let username = decode.username
-    if(user_id==undefined || user_id==""){
-        res.send({status:401,msg: '请先登录再进行购买'}).end();
+router.post('/order/:seckillKey',async (req,res,next)=>{
+    let {seckillKey} = req.params
+    let {itemID, nowtime} = req.body
+    const doSeckillKey = await get('miaosha:'+itemID+':doSeckillKey')
+    if(doSeckillKey !== seckillKey) {
+        res.send({status: 400, msg: '购买途径有误，请稍后尝试！'}).end();
     }else {
-        let ordertime = chinaTime('YYYY-MM-DD HH:mm:ss');
-        miaosha_lua.run('seckill', user_id, itemID,ordertime)
-            .then(result => {
-                const data = ['：库存不足', '：商品秒杀成功', '：已经购买该商品，该商品限购一件', '：访问次数太多，请稍后再试', '：排队中']
-                if (result) {
-                    console.log(result + "---" + username + data[result])
-                    res.send({status:200,code: result, msg: username + data[result]}).end();
-                } else {
-                    console.log(result + "---" + username + data[result])
-                    res.send({status:400,code: result, msg: username + data[result]}).end();
-                }
-            }).catch(err => {
-            console.error(err)
-            Promise.reject(err)
-        })
+        let decode = await getUserInfo(req.headers.authorization)
+        let user_id = decode.user_id
+        if (!user_id) {
+            res.send({status: 401, msg: '请先登录再进行购买'}).end();
+        } else {
+
+            let data = await hmget('miaosha:' + itemID, 'start_date', 'end_date')
+            let [start_date, end_date] = data
+            let startTime = new Date(start_date).getTime()
+            let endTime = new Date(end_date).getTime()
+
+            if (nowtime < startTime || nowtime > endTime) {
+                res.send({status: 400, msg: '该活动尚未开始或已结束，敬请期待！'}).end();
+            } else {
+                next()
+            }
+        }
     }
 })
-
+router.post('/order/:seckillKey',async (req,res,next)=> {
+    console.log("into doSeckill")
+    let decode = await getUserInfo(req.headers.authorization)
+    let username = decode.username
+    let user_id = decode.user_id
+    let {itemID} = req.body
+    let ordertime = chinaTime('YYYY-MM-DD HH:mm:ss');
+    miaosha_lua.run('seckill', user_id, itemID,ordertime)
+        .then(result => {
+            const data = ['：库存不足', '：商品秒杀成功', '：已经购买该商品，该商品限购一件', '：访问次数太多，请稍后再试', '：排队中']
+            if (result) {
+                console.log(result + "---" + username + data[result])
+                res.send({status:200,code: result, msg: username + data[result]}).end();
+            } else {
+                console.log(result + "---" + username + data[result])
+                res.send({status:400,code: result, msg: username + data[result]}).end();
+            }
+        }).catch(err => {
+        console.error(err)
+        Promise.reject(err)
+    })
+})
 
 router.post('/insertOrders',async (req,res)=>{
     let {itemID} = req.body
     let users = await hkeys('miaosha:'+itemID+':users')
     let ordertimes = await hvals('miaosha:'+itemID+':users')
+    let amount = await hget('miaosha:'+itemID,'stock')
     let price = await hget('miaosha:'+itemID,'price')
     for(let i=0; i<users.length; i++){
         // 生成order_id
@@ -103,8 +135,8 @@ router.post('/insertOrders',async (req,res)=>{
         //{'item_id':ID,'quantity':quantity,'order_id':order_id}
         await insertSeckillOrderDetail(order_id,itemID,1)
     }
-    res.send({status:200,errorCode:'saveSeckillOrder.success',msg:'存储订单成功'}).end();
-   // res.send({status:200,data:users}).end();
+    await updateStock(amount,users.length,itemID)
+    res.send({status:200,errorCode:'saveSeckillOrder.success',msg:'存储秒杀订单和更新秒杀商品库存成功'}).end();
 })
 
 router.get('/checkout', async (req,res)=>{
@@ -151,12 +183,6 @@ async function checkout(user_id,item_id){
         return value;
     }
 }
-
-router.get('/test',async (req,res)=>{
-    let {itemID} = req.query
-    let data = await smembers('miaosha:'+itemID,'start_date','2022-04-05 15:25:00')
-    res.send({data:data}).end();
-})
 
 module.exports = function (){
     return router;
