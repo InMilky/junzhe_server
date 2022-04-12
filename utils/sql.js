@@ -3,7 +3,9 @@ const user = {
     insert: 'insert into user_table(username,telphone,email,register_date) values(?,?,?,?)',
     queryByTelphone: 'select * from user_table where telphone = ?',
     queryByUsername: 'select * from user_table where username = ?',
-    queryByUserID: 'select * from user_table where ID = ?'
+    queryByUserID: 'select * from user_table where ID = ?',
+    getReceiver:'select name,telphone,address from receiver_info where user_id = ? and is_default = 1',
+    addReceiver:'insert into receiver_info(name,telphone,address,is_default,user_id) values(?,?,?,?,?)'
   },
   password: {
     insert: 'insert into user_password(telphone,encrypt_password,user_id) values(?,?,?)',
@@ -21,7 +23,8 @@ const item = {
   getCarousel:'select * from carousel',
   getSpecial:'select * from item order by m_price DESC limit ?,?',
   getBrand:'select * from brand order by level DESC limit 6',
-  getNice:'select * from item where img_url!=\'upload/\' and sold_num>3 order by sold_num limit 8',
+  getNice1:'select * from item where ID in (SELECT ID from item_detail) order by m_price limit 4',
+  getNice2:'select * from item where img_url!=\'upload/\' and sold_num>3 order by sold_num limit 4',
   getRecommond:'select * from item where img_url!=\'upload/\' and isMiaosha = 0 order by sold_num DESC limit 12',
   getMiaosha:'select * from item where isMiaosha = 1 and m_price order by m_price DESC'
 }
@@ -50,7 +53,7 @@ const order = {
   deleteOrderDetail:'delete from order_detail where order_id=?',
   selectAutoValue:'select currentValue from auto_increment where name = "order_No"',
   updateAutoValue:'update auto_increment set currentValue = currentValue+step where name = "order_No"',
-  getReceiver:'select name,telphone,address from receiver_info where user_id = ? and is_default = 1'
+
 }
 const miaosha={
   seckill_all:'select item_id,title,price,seckill_item.m_price,amount,seckill_item.sold_num,img_url ' +

@@ -9,7 +9,7 @@ const orderRouter = require('./routes/order');
 const miaoshaRouter = require('./routes/miaosha');
 const redisRouter = require('./routes/redisfn');
 
-var server = express();
+const server = express();
 
 server.all('*',(req,res,next)=>{
     res.header("Access-Control-Allow-Origin","*");
@@ -26,7 +26,8 @@ server.all('*',(req,res,next)=>{
 server.use(express.json());
 server.use(bP.urlencoded({extended:false}));
 
-server.use('/upload/',express.static(path.join(__dirname,'upload')));
+// server.use('/upload/',express.static(path.join(__dirname,'upload')));
+server.use('/upload/',express.static(path.join(process.cwd(),'upload')));
 
 server.use('/user',userRouter());
 server.use('/item',itemRouter());

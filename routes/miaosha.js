@@ -50,6 +50,7 @@ router.post('/getSecTime',async (req,res)=>{
             const doSeckillRandom = (randomnum+serverTime).toString(32);
             await setnx('miaosha:' + itemID + ':doSeckillKey', doSeckillRandom)
             await expire('miaosha:' + itemID + ':doSeckillKey', 51)
+            console.log('\ndoSeckillKey: ',doSeckillRandom)
             activityFlag = 1
         } else if (serverTime > endTime || stock <= 0) {
             activityFlag = 2
@@ -77,8 +78,7 @@ router.post('/order/:seckillKey',async (req,res,next)=>{
         res.send({status: 400, msg: '购买途径有误，请稍后尝试！'}).end();
     }else {
         let decode = await getUserInfo(req.headers.authorization)
-        let user_id = decode.user_id
-        if (!user_id) {
+        if (!decode) {
             res.send({status: 401, msg: '请先登录再进行购买'}).end();
         } else {
 
@@ -95,8 +95,8 @@ router.post('/order/:seckillKey',async (req,res,next)=>{
         }
     }
 })
-router.post('/order/:seckillKey',async (req,res,next)=> {
-    console.log("into doSeckill")
+router.post('/order/:seckillKey',async (req,res)=> {
+    console.log("\n============= into doSeckill =============\n")
     let decode = await getUserInfo(req.headers.authorization)
     let username = decode.username
     let user_id = decode.user_id
@@ -144,7 +144,6 @@ router.get('/checkout', async (req,res)=>{
     let user_id= req.query.user_id
     let item_id = "ff8f1a89-5e86-46bd-9f99-4d6b3eaaa9f4"
     // user_id = 'seckill-'+user_id
-    // console.log(user_id,item_id)
     let code = await checkout(user_id,item_id)
     const data = [':库存不足',':商品秒杀成功',':已经购买该商品',':访问次数太多，请稍后再试',':排队中']
     if(code){

@@ -3,8 +3,8 @@ const encrypt = require('../utils/encryption');
 const {sqlQuery} = require("../utils/databases");
 const jwtUtil = require("../utils/jwtUtils");
 const chinaTime = require('china-time');
-const {user} =  require('../utils/sql');
-const {getUserInfo,getUsername} = require('../utils/fn')
+const {user, order} =  require('../utils/sql');
+const {getUserInfo,getUsername, addReceiver, insertUser, insertPassword, getReceiver} = require('../utils/fn')
 const router = express.Router();
 
 // POST=>req.body.XXX, GET=>req.query.XXX
@@ -21,9 +21,10 @@ router.post('/signin',(req,res)=>{
                 console.log(telphone+"：该账号不存在，请前往注册");
                 res.send({status:400,errorCode:'user.non-exist',msg:'该账号不存在，请前往注册'}).end();
             }else if(result[0].telphone===telphone && result[0].encrypt_password === password){
-                console.log(telphone+"：登录成功");
+                console.log(telphone+"：登录成功")
                 let user = await getUsername(result[0].user_id)
                 let jwt_token = jwtUtil.sign({'user_id':result[0].user_id,'username':user.username},3600*2);
+                console.log(jwt_token);
                 res.send({status:200,errorCode:'ok',msg:'登录成功',username:user.username,token:jwt_token}).end();
             }else {
                 console.log(telphone+"：登录失败，账号或者密码错误");
@@ -55,8 +56,8 @@ router.post('/signup',async (req,res)=> {
     let {telphone, username, password, email} = req.body;
     let encrypt_password = encrypt.md5(password + encrypt.MD5_SUFFIX);
     let nowtime = chinaTime('YYYY-MM-DD HH:mm:ss');
-    let user_id = await InsertUser(username, telphone, email, nowtime)
-    let result = await InsertPassword(telphone,encrypt_password,user_id)
+    let user_id = await insertUser(username, telphone, email, nowtime)
+    let result = await insertPassword(telphone,encrypt_password,user_id)
     // 注册成功
     if(result.status===200){
         console.log(telphone + "：注册成功，user_id="+user_id);
@@ -64,6 +65,38 @@ router.post('/signup',async (req,res)=> {
     } else {
         console.log(telphone + "：注册失败");
         res.send({status: 500, errorCode: 'user.params.invalid', msg: '注册失败，参数错误'}).end();
+    }
+})
+router.post('/addReceiver',async (req,res)=> {
+    let {telphone, name, address, is_default} = req.body;
+    let decode = await getUserInfo(req.headers.authorization)
+    if(!decode){
+        res.send({status: 401, errorCode: 'non-get.userInfo', msg: '登录已失效，请重新登录'}).end();
+    }else {
+        let receiver = await addReceiver(name,telphone, address, is_default,decode.user_id)
+        if (receiver.length > 0) {
+            console.log('新增收货地址成功')
+            res.send({status: 200, errorCode: 'addReceiver.success', msg: '新增收货地址成功', data: receiver}).end();
+        } else {
+            console.log('新增收货地址失败')
+            res.send({status: 400, errorCode: 'addReceiver.success', msg: '新增收货地址失败'}).end();
+        }
+    }
+})
+router.get('/getReceiver',async (req, res) => {
+    let sql = user.table.getReceiver
+    let decode = await getUserInfo(req.headers.authorization)
+    if(!decode){
+        res.send({status: 401, errorCode: 'non-get.userInfo', msg: '登录已失效，请重新登录'}).end();
+    }else {
+        let result = await getReceiver(decode.user_id)
+        if (result.length > 0) {
+            console.log('获取收货地址成功')
+            res.send({status: 200, errorCode: 'getReceiver.success', msg: '获取收货地址成功', data: result}).end();
+        } else {
+            console.log('获取收货地址失败')
+            res.send({status: 400, errorCode: 'getReceiver.success', msg: '获取收货地址失败'}).end();
+        }
     }
 })
 
@@ -74,38 +107,10 @@ router.get('/getuser',async (req,res)=>{
     if(username){
         res.send({status: 200, errorCode: 'ok', msg: '获取用户信息成功',username:username}).end();
     }else{
-        res.send({status: 401, errorCode: 'non-get.userInfo', msg: '登录已失效，请重新登录',data:decode}).end();
+        res.send({status: 400, errorCode: 'non-get.userInfo', msg: '登录已失效，请重新登录',data:decode}).end();
     }
 })
 
-function InsertUser(username, telphone, email, nowtime){
-    const sql = user.table.insert
-    return new Promise((resolve,reject) => {
-        sqlQuery(sql, [username, telphone, email, nowtime], function (err, result) {
-            if (result.affectedRows > 0) {
-                // return result.insertId;
-                return resolve(result.insertId)
-            } else {
-                console.error(err);
-                return reject(err)
-            }
-        })
-    })
-}
-function InsertPassword(telphone,encrypt_password,user_id){
-    const sql = user.password.insert;
-    return new Promise((resolve,reject) => {
-        sqlQuery(sql,[telphone,encrypt_password,user_id],function (err,result) {
-            if (result.affectedRows > 0) {
-                // return new Promise(resolve=>{resolve({status:200})});
-                return  resolve({status:200})
-            } else {
-                console.error(err);
-                return reject(err)
-            }
-        })
-    })
-}
 
 module.exports = function (){
     return router;

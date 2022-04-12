@@ -29,7 +29,7 @@ router.get('/allOrder',async (req,res)=>{
             }
         } else {
             console.log('查询订单成功, 订单列表为空')
-            res.send({status: 200, errorCode: 'Orders.empty', msg: '订单列表为空'}).end();
+            res.send({status: 200, errorCode: 'Orders.empty', msg: '订单列表为空',data: ''}).end();
         }
     }
 })
@@ -60,7 +60,6 @@ router.get('/confirmOrder',async (req,res)=>{
         res.send({status: 401, errorCode: 'non-get.userInfo', msg: '登录已失效，请重新登录'}).end();
     }else {
         let {ID} = req.query
-        let receiver = await getReceiver(decode.user_id)
         let sql;
         if (ID instanceof Array) {
             if (ID.length > 1) { // 多购物车商品查询，拼接sql——in ('XX','XX')
@@ -76,6 +75,7 @@ router.get('/confirmOrder',async (req,res)=>{
         } else {
             sql = `select ID,title,price,m_price,color,img_url from item where ID = '${ID}'`
         }
+
         selfjointSQL(sql, (err, result) => {
             if (err) console.error(err)
             else {
@@ -85,8 +85,7 @@ router.get('/confirmOrder',async (req,res)=>{
                         status: 200,
                         errorCode: 'enterCheckoutView.success',
                         msg: '进入确认订单页面',
-                        data: result,
-                        receiver: receiver
+                        data: result
                     }).end();
                 } else {
                     console.log('进入确认订单页面失败')
@@ -131,26 +130,6 @@ router.post('/checkout',async (req,res)=>{
         } else {
             res.send({status: 400, errorCode: 'createOrder.non-success', msg: '生成订单失败'}).end();
         }
-    }
-})
-router.get('/getReceiver',async (req, res) => {
-    let sql = order.getReceiver
-    let decode = await getUserInfo(req.headers.authorization)
-    if(!decode){
-        res.send({status: 401, errorCode: 'non-get.userInfo', msg: '登录已失效，请重新登录'}).end();
-    }else {
-        sqlQuery(sql, [decode.user_id], (err, result) => {
-            if (err) console.error(err)
-            else {
-                if (result.length > 0) {
-                    console.log('获取收货地址成功')
-                    res.send({status: 200, errorCode: 'getReceiver.success', msg: '获取收货地址成功', data: result}).end();
-                } else {
-                    console.log('获取收货地址失败')
-                    res.send({status: 400, errorCode: 'getReceiver.success', msg: '获取收货地址失败'}).end();
-                }
-            }
-        })
     }
 })
 router.post('/payOrder',async (req,res)=>{

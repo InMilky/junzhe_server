@@ -6,7 +6,7 @@ const multer = require('multer');
 const {item} =  require('../utils/sql');
 const {
     getItem,
-    getItemInfo
+    getItemInfo, getNice
 } = require('../utils/fn')
 
 const router = express.Router();
@@ -41,26 +41,15 @@ router.get('/getBrand',(req,res)=>{
     })
 })
 
-router.get('/getNice',(req,res)=>{
-    let sql = item.getNice
-    sqlQuery(sql, {},(err,result)=>{
-        if(err) console.error(err)
-        else{
-            if(result.length<=0){
-                res.send({status:400,errorCode:'getNice.non-success'}).end();
-            }else{
-                let arr = [],arr2=[]
-                for(let i=0;i<4;i++){
-                    arr.push(result[i])
-                }
-                for(let i=4;i<8;i++){
-                    arr2.push(result[i])
-                }
-                result = [arr,arr2]
-                res.send({status:200,errorCode:'getNice.success',data:result}).end();
-            }
-        }
-    })
+router.get('/getNice',async (req,res)=>{
+    const arr = await getNice(item.getNice1)
+    const arr2= await getNice(item.getNice2)
+    const result = [arr, arr2]
+    if(arr && arr2) {
+        res.send({status: 200, errorCode: 'getNice.success', data: result}).end();
+    }else{
+        res.send({status: 400, errorCode: 'getNice.non-success', data: result}).end();
+    }
 })
 
 router.get('/getRecommond',(req,res)=>{
