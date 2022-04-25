@@ -37,6 +37,8 @@ server.use('/miaosha',miaoshaRouter());
 server.use('/redis',redisRouter());
 
 server.listen(5129,"127.0.0.1",function (){
-    console.log('running at http://127.0.0.1:5129');
+    console.log('=============================');
+    console.log('running at http://www.jz.com');
+    console.log('=============================');
     debug('Express server listening on port '+5129);//监听端口号
 });

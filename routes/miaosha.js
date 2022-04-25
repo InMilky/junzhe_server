@@ -62,7 +62,7 @@ router.post('/getSecTime',async (req,res)=>{
     // activityFlag=0活动未开始，1已经开始，2已结束
     let diffTime = activityFlag==0?startTime-serverTime:endTime-serverTime
     const doSeckillKey = await get('miaosha:'+itemID+':doSeckillKey')
-    if(activityFlag&&stock&&doSeckillKey){
+    if(stock){
         res.send({status:200,errorCode:'getSecTime.success',msg:'获取秒杀活动时间成功',
             data: {start_date:start_date,end_date:end_date,activityFlag:activityFlag,diffTime:diffTime,stock:stock,doSeckillKey:doSeckillKey}}).end();
     }else{
@@ -123,20 +123,24 @@ router.post('/insertOrders',async (req,res)=>{
     let users = await hkeys('miaosha:'+itemID+':users')
     let ordertimes = await hvals('miaosha:'+itemID+':users')
     let amount = await hget('miaosha:'+itemID,'stock')
-    let price = await hget('miaosha:'+itemID,'price')
-    for(let i=0; i<users.length; i++){
-        // 生成order_id
-        let ordertime = ordertimes[i].split(" ")[0].replace(/(\d+)-(\d+)-(\d+)/g,'$1$2$3')
-        let autoValue = await getAutoValue()
-        let order_id = ordertime+autoValue+Math.floor((Math.random() * 100))
-        // {'order_id':order_id,'user_id':user_id,'item_id':itemID,'amount':price,'order_price':price,'ordertime':ordertime}
-        await insertSeckillOrder(order_id,users[i],itemID,price,price,ordertimes[i])
-        await insertOrder(order_id,price,users[i],ordertimes[i])
-        //{'item_id':ID,'quantity':quantity,'order_id':order_id}
-        await insertSeckillOrderDetail(order_id,itemID,1)
+    if(amount<10) {
+        let price = await hget('miaosha:' + itemID, 'price')
+        for (let i = 0; i < users.length; i++) {
+            // 生成order_id
+            let ordertime = ordertimes[i].split(" ")[0].replace(/(\d+)-(\d+)-(\d+)/g, '$1$2$3')
+            let autoValue = await getAutoValue()
+            let order_id = ordertime + autoValue + Math.floor((Math.random() * 100))
+            // {'order_id':order_id,'user_id':user_id,'item_id':itemID,'amount':price,'order_price':price,'ordertime':ordertime}
+            await insertSeckillOrder(order_id, users[i], itemID, price, price, ordertimes[i])
+            await insertOrder(order_id, price, users[i], ordertimes[i])
+            //{'item_id':ID,'quantity':quantity,'order_id':order_id}
+            await insertSeckillOrderDetail(order_id, itemID, 1)
+        }
+        amount = parseInt(amount)
+        await updateStock(amount, users.length, itemID)
     }
-    await updateStock(amount,users.length,itemID)
-    res.send({status:200,errorCode:'saveSeckillOrder.success',msg:'存储秒杀订单和更新秒杀商品库存成功'}).end();
+    console.log('saveSeckillOrder.success')
+    res.send('saveSeckillOrder.success').end();
 })
 
 router.get('/checkout', async (req,res)=>{
